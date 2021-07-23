@@ -36,6 +36,13 @@ public class ConnectGenAlg extends GenAlg {
 
     //calculate the fitness of the population
     public void calculateFitness() {
+    	int numberOfThreads = Runtime.getRuntime().availableProcessors();
+    	FitnessThread[] runner = new FitnessThread[numberOfThreads];
+    	//Create threads
+    	for(int i = 0; i < numberOfThreads; i++) {
+    		runner[i] = new FitnessThread();
+    	}
+    	
         if (roundRobin){
             rrFitness();
         } else {
@@ -45,23 +52,30 @@ public class ConnectGenAlg extends GenAlg {
                 if (g.getCalculatedFitness()){
                     // do nothing
                 } else {
-                    double temp =calculateFitness(g);
-                    double temp2 = g.getFitness();
-                     
-                    g.setFitness(temp);
-                    //counter++;
-                    //   System.out.println(
-                    //        "Finished " + counter + " of them. It was "
-                    //                   + g.getFitness());
-                    //System.out.println((temp-temp2)+"," + temp + "," + temp2);
-                    
+                	//Add this individual to a runnable thread.
+                    int index = (int) (Math.random() * numberOfThreads);
+                    runner[index].subPop.add(g);
                 }
             }
-            //this just makes stuff look nice
-            System.out.println("");
         }
-
-
+        
+        //Start the threads
+        Thread[] threads = new Thread[numberOfThreads];
+        for(int i = 0; i < numberOfThreads; i++) {
+        	Thread thread = new Thread(runner[i]);
+        	thread.start();
+        	threads[i] = thread;
+        }
+        
+        for(int i = 0; i < numberOfThreads; i++) {
+        	try {
+				threads[i].join();
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+        }
+        System.out.println("");
     }
     
     public void rrFitness() {
@@ -120,16 +134,16 @@ public class ConnectGenAlg extends GenAlg {
             
         }//end recording fitnesses
     }
-
-    /*
+    
+     /*
      * Let's define the fitness as (the amount of turns) before
      * this AI gets beaten.
      *
      * If the NeuralNetAI wins the game, the fitness becomes 50 
      *
      */ 
-    public double calculateFitness(Genome g) {
-       
+	public double calculateFitness(Genome g) {
+	       
         Game game1 = new Game(new NeuralNetAI(g), new AlphaBetaE(1));
         Game game2 = new Game(new AlphaBetaE(1), new NeuralNetAI(g));
         
@@ -150,10 +164,5 @@ public class ConnectGenAlg extends GenAlg {
         }
             
         return ( (score1 + score2)/2);
-        
-        
-    } 
-    
-    
-    
+	}
 }
